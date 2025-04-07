@@ -54,32 +54,9 @@ def compress_with_ghostscript(input_path, output_path, compression_level="screen
         return False
 
 def compress_with_qpdf(input_path, output_path):
-    """Use QPDF for lossless compression when available"""
-    try:
-        subprocess.run(["qpdf", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("Using QPDF for lossless compression...")
-        
-        try:
-            # QPDF command for optimization
-            qpdf_params = [
-                "qpdf",
-                "--linearize",
-                "--compress-streams=y",
-                "--recompress-flate",
-                "--object-streams=generate",
-                input_path,
-                output_path
-            ]
-            
-            # Run QPDF
-            subprocess.run(qpdf_params, check=True)
-            return True
-        except Exception as e:
-            print(f"QPDF compression failed: {e}")
-            return False
-    except:
-        print("QPDF not found")
-        return False
+    """Use QPDF for lossless compression when available - Disabled as QPDF is not supported"""
+    print("QPDF compression is not available in this environment")
+    return False
 
 def compress_with_pikepdf(input_path, output_path, quality="low"):
     """Use pikepdf as the fallback compression method"""
