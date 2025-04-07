@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Compressor</title>
+l    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto">
+            <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">File Compressor</h1>
+            
+            <!-- Tab Navigation -->
+            <div class="flex mb-6 bg-white rounded-lg shadow overflow-hidden">
+                <button class="flex-1 py-3 px-4 text-center font-medium border-b-2 border-blue-600 bg-white text-blue-600" data-tab="pdf">PDF</button>
+                <button class="flex-1 py-3 px-4 text-center font-medium border-b-2 border-transparent hover:text-gray-700" data-tab="jpg">JPG</button>
+                <button class="flex-1 py-3 px-4 text-center font-medium border-b-2 border-transparent hover:text-gray-700" data-tab="png">PNG</button>
+                <button class="flex-1 py-3 px-4 text-center font-medium border-b-2 border-transparent hover:text-gray-700" data-tab="video">Video</button>
+            </div>
+
+            <!-- PDF Compression Section -->
+            <div id="pdf-tab" class="tab-content active bg-white rounded-lg shadow-lg p-6">
+                <form id="pdfForm" class="space-y-6">
+                    <div id="pdfDropZone" class="drop-zone rounded-lg p-8 text-center cursor-pointer">
+                        <div id="pdfUploadPlaceholder" class="space-y-4">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="text-gray-600">
+                                <label for="pdfFileInput" class="relative cursor-pointer">
+                                    <span class="text-blue-600 hover:text-blue-500">Upload a PDF</span>
+                                    <span class="text-gray-500"> or drag and drop</span>
+                                    <input id="pdfFileInput" name="file" type="file" accept=".pdf" class="sr-only">
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500">PDF up to 16MB</p>
+                        </div>
+                        <div id="pdfFileDetails" class="hidden space-y-4">
+                            <div class="flex items-center justify-center space-x-2">
+                                <svg class="h-8 w-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <div class="text-left">
+                                    <p id="pdfFileName" class="font-medium text-gray-900"></p>
+                                    <p id="pdfFileSize" class="text-sm text-gray-500"></p>
+                                </div>
+                            </div>
+                            <button type="button" id="pdfRemoveFile" class="text-sm text-red-600 hover:text-red-800">Remove file</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Compression Method</label>
+                            <select name="method" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="auto">Auto (Try all methods)</option>
+                                <option value="gs">Ghostscript (Best compression)</option>
+                                <option value="qpdf">QPDF (Lossless compression)</option>
+                                <option value="pikepdf">PikePDF (Fast compression)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50" disabled>Compress PDF</button>
+                    </div>
+                </form>
+
+                <div id="pdfProgress" class="hidden mt-6 space-y-4">
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="progress-bar bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <p id="pdfStatus" class="text-sm text-center text-gray-600">Processing...</p>
+                    <div id="pdfCompressionStats" class="hidden bg-white rounded-lg shadow p-4 mt-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Compression Results</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center">
+                                <p class="text-sm text-gray-500">Original Size</p>
+                                <p id="pdfOriginalSize" class="text-lg font-medium text-gray-900">-</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm text-gray-500">Compressed Size</p>
+                                <p id="pdfCompressedSize" class="text-lg font-medium text-gray-900">-</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <p class="text-sm text-gray-500">Size Reduction</p>
+                            <p id="pdfReduction" class="text-2xl font-bold text-green-600">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JPG Compression Section -->
+            <div id="jpg-tab" class="tab-content bg-white rounded-lg shadow-lg p-6">
+                <form id="jpgForm" class="space-y-6">
+                    <div id="jpgDropZone" class="drop-zone rounded-lg p-8 text-center cursor-pointer">
+                        <div id="jpgUploadPlaceholder" class="space-y-4">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="text-gray-600">
+                                <label for="jpgFileInput" class="relative cursor-pointer">
+                                    <span class="text-blue-600 hover:text-blue-500">Upload a JPG</span>
+                                    <span class="text-gray-500"> or drag and drop</span>
+                                    <input id="jpgFileInput" name="file" type="file" accept=".jpg,.jpeg" class="sr-only">
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500">JPG up to 16MB</p>
+                        </div>
+                        <div id="jpgFileDetails" class="hidden space-y-4">
+                            <div class="flex items-center justify-center space-x-2">
+                                <svg class="h-8 w-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <div class="text-left">
+                                    <p id="jpgFileName" class="font-medium text-gray-900"></p>
+                                    <p id="jpgFileSize" class="text-sm text-gray-500"></p>
+                                </div>
+                            </div>
+                            <button type="button" id="jpgRemoveFile" class="text-sm text-red-600 hover:text-red-800">Remove file</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Quality</label>
+                            <input type="range" name="quality" min="1" max="100" value="80" class="w-full">
+                            <div class="flex justify-between text-xs text-gray-500">
+                                <span>Lower Quality</span>
+                                <span>Higher Quality</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50" disabled>Compress JPG</button>
+                    </div>
+                </form>
+
+                <div id="jpgProgress" class="hidden mt-6 space-y-4">
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="progress-bar bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <p id="jpgStatus" class="text-sm text-center text-gray-600">Processing...</p>
+                    <div id="jpgCompressionStats" class="hidden bg-white rounded-lg shadow p-4 mt-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Compression Results</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center">
+                                <p class="text-sm text-gray-500">Original Size</p>
+                                <p id="jpgOriginalSize" class="text-lg font-medium text-gray-900">-</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm text-gray-500">Compressed Size</p>
+                                <p id="jpgCompressedSize" class="text-lg font-medium text-gray-900">-</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <p class="text-sm text-gray-500">Size Reduction</p>
+                            <p id="jpgReduction" class="text-2xl font-bold text-green-600">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PNG Compression Section -->
+            <div id="png-tab" class="tab-content bg-white rounded-lg shadow-lg p-6">
+                <form id="pngForm" class="space-y-6">
+                    <div id="pngDropZone" class="drop-zone rounded-lg p-8 text-center cursor-pointer">
+                        <div id="pngUploadPlaceholder" class="space-y-4">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="text-gray-600">
+                                <label for="pngFileInput" class="relative cursor-pointer">
+                                    <span class="text-blue-600 hover:text-blue-500">Upload a PNG</span>
+                                    <span class="text-gray-500"> or drag and drop</span>
+                                    <input id="pngFileInput" name="file" type="file" accept=".png" class="sr-only">
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500">PNG up to 16MB</p>
+                        </div>
+                        <div id="pngFileDetails" class="hidden space-y-4">
+                            <div class="flex items-center justify-center space-x-2">
+                                <svg class="h-8 w-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <div class="text-left">
+                                    <p id="pngFileName" class="font-medium text-gray-900"></p>
+                                    <p id="pngFileSize" class="text-sm text-gray-500"></p>
+                                </div>
+                            </div>
+                            <button type="button" id="pngRemoveFile" class="text-sm text-red-600 hover:text-red-800">Remove file</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Compression Level</label>
+                            <input type="range" name="level" min="1" max="9" value="6" class="w-full">
+                            <div class="flex justify-between text-xs text-gray-500">
+                                <span>Faster</span>
+                                <span>Smaller Size</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50" disabled>Compress PNG</button>
+                    </div>
+                </form>
+
+                <div id="pngProgress" class="hidden mt-6 space-y-4">
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="progress-bar bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <p id="pngStatus" class="text-sm text-center text-gray-600">Processing...</p>
+                    <div id="pngCompressionStats" class="hidden bg-white rounded-lg shadow p-4 mt-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Compression Results</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center">
+                                <p class="text-sm text-gray-500">Original Size</p>
+                                <p id="pngOriginalSize" class="text-lg font-medium text-gray-900">-</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm text-gray-500">Compressed Size</p>
+                                <p id="pngCompressedSize" class="text-lg font-medium text-gray-900">-</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <p class="text-sm text-gray-500">Size Reduction</p>
+                            <p id="pngReduction" class="text-2xl font-bold text-green-600">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Compression Section -->
+            <div id="video-tab" class="tab-content bg-white rounded-lg shadow-lg p-6">
+                <form id="videoForm" class="space-y-6">
+                    <div id="videoDropZone" class="drop-zone rounded-lg p-8 text-center cursor-pointer">
+                        <div id="videoUploadPlaceholder" class="space-y-4">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="text-gray-600">
+                                <label for="videoFileInput" class="relative cursor-pointer">
+                                    <span class="text-blue-600 hover:text-blue-500">Upload a video</span>
+                                    <span class="text-gray-500"> or drag and drop</span>
+                                    <input id="videoFileInput" name="file" type="file" accept=".mp4,.avi,.mov" class="sr-only">
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500">Video up to 500MB</p>
+                        </div>
+                        <div id="videoFileDetails" class="hidden space-y-4">
+                            <div class="flex items-center justify-center space-x-2">
+                                <svg class="h-8 w-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                                <div class="text-left">
+                                    <p id="videoFileName" class="font-medium text-gray-900"></p>
+                                    <p id="videoFileSize" class="text-sm text-gray-500"></p>
+                                </div>
+                            </div>
+                            <button type="button" id="videoRemoveFile" class="text-sm text-red-600 hover:text-red-800">Remove file</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Resolution</label>
+                            <select name="resolution" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="original">Original Resolution</option>
+                                <option value="1080p">1080p (1920x1080)</option>
+                                <option value="720p">720p (1280x720)</option>
+                                <option value="480p">480p (854x480)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Bitrate (Quality)</label>
+                            <input type="range" name="bitrate" min="500" max="8000" value="2000" class="w-full">
+                            <div class="flex justify-between text-xs text-gray-500">
+                                <span>Lower Quality</span>
+                                <span>Higher Quality</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50" disabled>Compress Video</button>
+                    </div>
+                </form>
+
+                <div id="videoProgress" class="hidden mt-6 space-y-4">
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="progress-bar bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <p id="videoStatus" class="text-sm text-center text-gray-600">Processing...</p>
+                    <div id="videoCompressionStats" class="hidden bg-white rounded-lg shadow p-4 mt-4">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Compression Results</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center">
+                                <p class="text-sm text-gray-500">Original Size</p>
+                                <p id="videoOriginalSize" class="text-lg font-medium text-gray-900">-</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm text-gray-500">Compressed Size</p>
+                                <p id="videoCompressedSize" class="text-lg font-medium text-gray-900">-</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <p class="text-sm text-gray-500">Size Reduction</p>
+                            <p id="videoReduction" class="text-2xl font-bold text-green-600">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        const tabs = document.querySelectorAll('[data-tab]');
+
+        // Setup file upload handlers for all types
+        setupFileUpload('video');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Update tab styles
+                tabs.forEach(t => {
+                    t.classList.remove('border-blue-600', 'text-blue-600');
+                    t.classList.add('border-transparent');
+                });
+                tab.classList.add('border-blue-600', 'text-blue-600');
+                tab.classList.remove('border-transparent');
+
+                // Show corresponding content
+                const tabContents = document.querySelectorAll('.tab-content');
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+            });
+        });
+
+        // Utility functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function setupFileUpload(fileType) {
+            const form = document.getElementById(`${fileType}Form`);
+            const dropZone = document.getElementById(`${fileType}DropZone`);
+            const fileInput = document.getElementById(`${fileType}FileInput`);
+            const submitButton = form.querySelector('button[type="submit"]');
+            const progress = document.getElementById(`${fileType}Progress`);
+            const progressBar = progress.querySelector('.progress-bar');
+            const status = document.getElementById(`${fileType}Status`);
+            const fileDetails = document.getElementById(`${fileType}FileDetails`);
+            const uploadPlaceholder = document.getElementById(`${fileType}UploadPlaceholder`);
+            const fileName = document.getElementById(`${fileType}FileName`);
+            const fileSize = document.getElementById(`${fileType}FileSize`);
+            const removeFile = document.getElementById(`${fileType}RemoveFile`);
+
+            // Drag and drop handlers
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                fileInput.files = dt.files;
+                updateFileDisplay();
+            }, false);
+
+            fileInput.addEventListener('change', updateFileDisplay);
+
+            removeFile.addEventListener('click', () => {
+                fileInput.value = '';
+                updateFileDisplay();
+            });
+
+            function updateFileDisplay() {
+                const file = fileInput.files[0];
+                const maxSize = 16 * 1024 * 1024; // 16MB
+
+                if (file) {
+                    fileName.textContent = file.name;
+                    fileSize.textContent = formatFileSize(file.size);
+                    uploadPlaceholder.classList.add('hidden');
+                    fileDetails.classList.remove('hidden');
+                    submitButton.disabled = file.size > maxSize;
+
+                    if (file.size > maxSize) {
+                        status.textContent = 'File size exceeds 16MB limit';
+                        status.classList.add('text-red-600');
+                        progress.classList.remove('hidden');
+                    } else {
+                        progress.classList.add('hidden');
+                    }
+                } else {
+                    uploadPlaceholder.classList.remove('hidden');
+                    fileDetails.classList.add('hidden');
+                    submitButton.disabled = true;
+                }
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(form);
+
+                progress.classList.remove('hidden');
+                form.classList.add('opacity-50', 'pointer-events-none');
+                progressBar.style.width = '50%';
+                status.textContent = 'Compressing...';
+                status.classList.remove('text-red-600');
+
+                try {
+                    const response = await fetch(`/compress/${fileType}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    let result;
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        result = await response.json();
+                    } else {
+                        const text = await response.text();
+                        throw new Error('Server returned non-JSON response: ' + text);
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Compression failed');
+                    }
+
+                    progressBar.style.width = '100%';
+                    status.textContent = 'Compression complete! Downloading...';
+
+                    // Update compression stats
+                    const statsDiv = document.getElementById(`${fileType}CompressionStats`);
+                    const originalSizeEl = document.getElementById(`${fileType}OriginalSize`);
+                    const compressedSizeEl = document.getElementById(`${fileType}CompressedSize`);
+                    const reductionEl = document.getElementById(`${fileType}Reduction`);
+                    
+                    originalSizeEl.textContent = formatFileSize(result.original_size);
+                    compressedSizeEl.textContent = formatFileSize(result.compressed_size);
+                    reductionEl.textContent = `${result.reduction.toFixed(1)}%`;
+                    statsDiv.classList.remove('hidden');
+
+                    // Download the compressed file
+                    const fileResponse = await fetch(`/download/${encodeURIComponent(result.file_path)}`);
+                    if (!fileResponse.ok) {
+                        throw new Error('Failed to download compressed file');
+                    }
+                    const blob = await fileResponse.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileInput.files[0].name.replace(`.${fileType}`, `_compressed.${fileType}`);
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+
+                    // Reset form after success but keep stats visible
+                    setTimeout(() => {
+                        form.classList.remove('opacity-50', 'pointer-events-none');
+                        progressBar.style.width = '0%';
+                        status.textContent = 'Compression complete!';
+                    }, 2000);
+
+                } catch (error) {
+                    console.error('Compression error:', error);
+                    status.textContent = error.message;
+                    status.classList.add('text-red-600');
+                    progressBar.style.width = '0%';
+                    
+                    setTimeout(() => {
+                        progress.classList.add('hidden');
+                        form.classList.remove('opacity-50', 'pointer-events-none');
+                    }, 3000);
+                }
+            });
+        }
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Initialize file upload handlers for each type
+        setupFileUpload('pdf');
+        setupFileUpload('jpg');
+        setupFileUpload('png');
+    </script>
+</body>
+</html>

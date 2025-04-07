@@ -1,0 +1,17 @@
+.drop-zone {
+    border: 2px dashed #4a5568;
+    transition: all 0.3s ease;
+}
+
+.drop-zone.dragover {
+    border-color: #4299e1;
+    background-color: #ebf8ff;
+}
+
+.progress-bar {
+    transition: width 0.3s ease;
+}
+
+.tab-content:not(.active) {
+    display: none;
+}
